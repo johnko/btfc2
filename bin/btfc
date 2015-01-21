@@ -1,1 +1,76 @@
 #!/bin/sh
+######################################################################
+# LICENSE pulled in with, cat LICENSE | awk '{print "# "$0}'
+######################################################################
+# Copyright (c) 2015, John Ko
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+######################################################################
+# Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
+######################################################################
+SCRIPTVERSION=150121-075208
+
+# PSEUDO CODE
+#
+# btfc -i [-l] [-p] [-d directory] [-P PORT] [-s seconds]
+# .. -i init
+# .. rsync copy as default because safer, but we can specify -l for hardlink optional speed and save space
+# .. -p for prune
+# .. -d folder, like ~/btfc
+# .. -P for TCP/IP port
+# .. -s for INTERVAL in seconds
+# .. if client not running
+# .... if ! diff -r ~/.btfccache/hash_of_pathname/folder ~/folder (different)
+# ...... rsync ~/folder/ ~/.btfccache/hash_of_pathname/folder/ (or if -l, rm -rf ~/.btfccache/hash_of_pathname/folder + cp -rl for speed)
+# ...... create ~/.btfctmp/folder.torrent file from ~/.btfccache/hash_of_pathname/folder
+# .... fi
+# .... if ~/.btfcmeta/folder.torrent not exist
+# ...... rsync ~/folder/ ~/.btfccache/hash_of_pathname/folder/ (or if -l, rm -rf ~/.btfccache/hash_of_pathname/folder + cp -rl for speed)
+# ...... create ~/.btfctmp/folder.torrent file from ~/.btfccache/hash_of_pathname/folder
+# .... fi
+# .... PUBLISH (using the copy+git commit strategy) from ~/.btfctmp/folder.torrent to ~/gitsync (in gtfc if gitsync exists)
+# .. fi
+# .. run btfc -c [-l] [-p] [-d directory] [-P PORT] [-s seconds]
+#
+# btfc -c [-l] [-p] [-d directory] [-P PORT] [-s seconds]
+# .. -c means clone
+# .. SUBSCRIBE (using copy strategy) from ~/gitsync to ~/.btfctmp/folder.torrent
+# .. if ! diff ~/.btfctmp/folder.torrent ~/.btfcmeta/folder.torrent (different)
+# .... if seeding(100%), leeching(not100%) or nostate(?) but .torrent different then
+# ...... stop client
+# .... fi
+# .... if seeding or nostate but .torrent different then
+# ...... rsync ~/folder/ ~/.btfccache/hash_of_pathname/folder/ (or if -l, rm -rf ~/.btfccache/hash_of_pathname/folder + cp -rl for speed)
+# .... fi
+# .... if -p prune: try if grep file name not in .torrent, unlink the .btfccache/hash_of_pathname/folder/path/file
+# .... run torrent client with metadata from ~/.btfcmeta/folder.torrent and saving data to ~/.btfccache/folder
+# .... on complete: rsync with (-c default, -t speed) and with backup or save conflict copy to ~/btfc/folder
+# .... if -p prune: try rsync --delete in above
+# .. fi
+# .. if ! diff -r ~/.btfccache/hash_of_pathname/folder ~/folder (different)
+# .... stop client
+# .. else
+# .... sleep for INTERVAL seconds
+# .. fi
+# .. run btfc -i [-l] [-p] [-d directory] [-P PORT] [-s seconds]
