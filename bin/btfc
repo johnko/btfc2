@@ -51,12 +51,12 @@ exiterror() {
 }
 
 
-hashpath() {
+getfullpath() {
   if [ -d "${PATH}" ]; then
     cd "${PATH}"
     FULLPATH=`pwd`
     cd -
-    echo "${FULLPATH}" | shasum -a 1 | grep -o '[a-zA-Z0-9]*'
+    echo $FULLPATH
   else
     exiterror 1 "${PATH} is not a directory."
   fi
@@ -77,36 +77,37 @@ validpid() {
 
 copy_path_to_cache() {
   if [ "$HARDLINK" = "-l" ]; then
-    if [ "x" != "x${HASHOFPATH}" ]; then
-      #hardcoded so we don't delete /
-      if [ -d "~/.btfccache/${HASHOFPATH}" ]; then
-        rm -r "~/.btfccache/${HASHOFPATH}" || exiterror 1 "Can't rm -r ~/.btfccache/${HASHOFPATH}"
-      fi
-      install -d -m 700 "${BTFCCACHE}/${HASHOFPATH}"
-      cp -rl "${FULLPATH}" "${BTFCCACHE}/${HASHOFPATH}/" || exiterror 1 "Can't cp -rl ${FULLPATH} ${BTFCCACHE}/${HASHOFPATH}/"
+    #hardcoded so we don't delete /
+    if [ -d "~/.btfccache/${NAME}" ]; then
+      rm -r "~/.btfccache/${NAME}" || exiterror 1 "Can't rm -r ~/.btfccache/${NAME}"
+    fi
+    install -d -m 700 "${BTFCCACHE}/${NAME}"
+    cp -rl "${FULLPATH}" "${BTFCCACHE}/" || exiterror 1 "Can't cp -rl ${FULLPATH} ${BTFCCACHE}/"
     else
       exiterror 1 "Can't sha1 the path."
     fi
   else
-    rsync -rq $RSYNCCHECK $1 "${FULLPATH}/" "${BTFCCACHE}/${HASHOFPATH}/${FULLPATH##*/}/"
+    rsync -rq $RSYNCCHECK $1 "${FULLPATH}/" "${BTFCCACHE}/${NAME}/"
   fi
 }
 
 copy_to_fullpath() {
   # ...... if -p prune: try rsync --delete
-  rsync -rq $RSYNCCHECK $RSYNCDELETE "${BTFCCACHE}/${HASHOFPATH}/${FULLPATH##*/}/" "${FULLPATH}/"
+  rsync -rq $RSYNCCHECK $RSYNCDELETE "${BTFCCACHE}/${NAME}/" "${FULLPATH}/"
 }
 
 
 make_torrent() { #TODO XXXXX
-
+  # ...... rsync ~/folder/ ~/.btfccache/hash_of_pathname/folder/ (or if -l, rm -rf ~/.btfccache/hash_of_pathname/folder + cp -rl for speed)
+  copy_path_to_cache --delete
+  # ...... create ~/.btfctmp/folder.torrent file from ~/.btfccache/hash_of_pathname/folder
 }
 
 
 start_transmissioncli() { #TODO XXXXX
   # ...... run torrent client with metadata from ~/.btfcmeta/folder.torrent and saving data to ~/.btfccache/folder
   # ...... on complete: rsync with (-c default, -t speed) and with backup or save conflict copy to ~/btfc/folder
-  copy_to_fullpath
+  copy_to_fullpath && STATUS="-S"
 }
 
 
@@ -125,8 +126,8 @@ prune_by_grep() { #TODO XXXXX
 subscribe_using() {
   if [ "$1" = "copy" ]; then
     if [ "x" != "x${WATCH}" ]; then
-      if [ -e "${WATCH}/${HASHOFPATH}.torrent" ]; then
-        cp "${WATCH}/${HASHOFPATH}.torrent" "${BTFCTMP}/${HASHOFPATH}.torrent"
+      if [ -e "${WATCH}/${NAME}.torrent" ]; then
+        cp "${WATCH}/${NAME}.torrent" "${BTFCTMP}/${NAME}.torrent"
       fi
     else
       exiterror 1 "-w is not specified."
@@ -136,11 +137,13 @@ subscribe_using() {
 
 
 publish_using() {
-  if [ "$1" = "copy-git-add-commit" ]; then
-    cp "${BTFCMETA}/${HASHOFPATH}.torrent" "${WATCH}/${HASHOFPATH}.torrent"
+  if [ "$1" = "copy" ]; then
+    cp "${BTFCMETA}/${NAME}.torrent" "${WATCH}/${NAME}.torrent"
+  elif [ "$1" = "copy-git-add-commit" ]; then
+    cp "${BTFCMETA}/${NAME}.torrent" "${WATCH}/${NAME}.torrent"
     cd "${WATCH}"
-    git add "${HASHOFPATH}.torrent"
-    git commit -m "updated ${HASHOFPATH}.torrent"
+    git add "${NAME}.torrent"
+    git commit -m "updated ${NAME}.torrent"
     cd -
   fi
 }
@@ -155,20 +158,22 @@ leech() {
     copy_path_to_cache
     # ...... fi
   fi
-  mv "${BTFCTMP}/${HASHOFPATH}.torrent" "${BTFCMETA}/${HASHOFPATH}.torrent"
+  mv "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent"
   # ...... if -p prune: try if grep file name not in .torrent, unlink the .btfccache/hash_of_pathname/folder/path/file
   [ "$PRUNE" = "-p" ] && prune_by_grep
   start_transmissioncli
 }
 
-while getopts w:d:P:s:iclpSLvh o; do
+while getopts w:d:N:P:t:icslpSLvh o; do
   case "$o" in
     w) WATCH="${OPTARG}" ;;
     d) PATH="${OPTARG}" ;;
+    N) NAME="${OPTARG}" ;;
     P) PORT="${OPTARG}" ;;
-    s) WAITSECONDS="${OPTARG}" ;;
+    t) WAITSECONDS="${OPTARG}" ;;
     i) ACTION="init" ;;
     c) ACTION="clone" ;;
+    s) ACTION="status" ;;
     l) HARDLINK="-l" ;;
     p) PRUNE="-p" ;;
     S) STATUS="-S" ;; #seeding
@@ -204,13 +209,19 @@ fi
 [ "$PRUNE" = "-p" ] && RSYNCDELETE="--delete"
 RSYNCCHECK="-c"
 [ "$HARDLINK" = "-l" ] && RSYNCCHECK="-t"
-
-HASHOFPATH=`hashpath`
-if [ "x" = "x${HASHOFPATH}" ]; then
-  exiterror 1 "Can't sha1 the path."
-fi
+FULLPATH=`getfullpath`
 if [ "x" = "x${FULLPATH}" ]; then
   exiterror 1 "Can't pwd in the path."
+fi
+NAME=`echo $NAME | grep -o '[a-zA-Z0-9]' | tr -d '\n'`
+if [ "x" = "x${NAME}" ]; then
+  NAME=`echo ${FULLPATH##*/} | grep -o '[a-zA-Z0-9]' | tr -d '\n'`
+fi
+if [ "x" = "x${PUBLISH}" ]; then
+  PUBLISH="copy-git-add-commit"
+fi
+if [ "x" = "x${SUBSCRIBE}" ]; then
+  SUBSCRIBE="copy"
 fi
 
 
@@ -225,49 +236,43 @@ if [ "$ACTION" = "init" ]; then
 # .. -P for TCP/IP port
 # .. -s for INTERVAL in seconds
 # .. if client not running
-     if ! validpid ${HASHOFPATH} ; then
+     if ! validpid ${NAME} ; then
 # .... if ! diff -r ~/.btfccache/hash_of_pathname/folder ~/folder (different)
-       install -d -m 700 "${BTFCCACHE}/${HASHOFPATH}/${FULLPATH##*/}"
-       if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${HASHOFPATH}/${FULLPATH##*/}/" ; then
-# ...... rsync ~/folder/ ~/.btfccache/hash_of_pathname/folder/ (or if -l, rm -rf ~/.btfccache/hash_of_pathname/folder + cp -rl for speed)
-         copy_path_to_cache --delete
-# ...... create ~/.btfctmp/folder.torrent file from ~/.btfccache/hash_of_pathname/folder
+       install -d -m 700 "${BTFCCACHE}/${NAME}"
+       if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" ; then
          make_torrent
 # .... fi
        fi
 # .... if ~/.btfcmeta/folder.torrent not exist
-       if [ ! -e "${BTFCMETA}/${HASHOFPATH}.torrent" ]; then
-# ...... rsync ~/folder/ ~/.btfccache/hash_of_pathname/folder/ (or if -l, rm -rf ~/.btfccache/hash_of_pathname/folder + cp -rl for speed)
-         copy_path_to_cache --delete
-# ...... create ~/.btfctmp/folder.torrent file from ~/.btfccache/hash_of_pathname/folder
+       if [ ! -e "${BTFCMETA}/${NAME}.torrent" ]; then
          make_torrent
 # .... fi
        fi
 # .... PUBLISH (using the copy+git commit strategy) from ~/.btfctmp/folder.torrent to ~/gitsync (in gtfc if gitsync exists)
-       publish_using copy-git-add-commit
+       publish_using ${PUBLISH}
        STATUS="-S"
 # .. fi
      fi
-# .. run btfc -c [-l] [-p] [-d directory] [-P PORT] [-s seconds]
-     ${0} -c $HARDLINK $PRUNE -d $FULLPATH -P $PORT -s $WAITSECONDS -w $WATCH $STATUS &
+# .. run btfc -c [-l] [-p] [-d source_directory] [-P PORT] [-s seconds]
+     ${0} -c $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -t $WAITSECONDS -w $WATCH $STATUS &
 #
 elif [ "$ACTION" = "clone" ]; then
 # btfc -c [-l] [-p] [-d directory] [-P PORT] [-s seconds]
 # .. -c means clone
 # .. SUBSCRIBE (using copy strategy) from ~/gitsync to ~/.btfctmp/folder.torrent
-     subscribe_using copy
+     subscribe_using ${SUBSCRIBE}
 # .. if ! diff ~/.btfctmp/folder.torrent ~/.btfcmeta/folder.torrent (different)
-     if   [ -e "${BTFCTMP}/${HASHOFPATH}.torrent" ] && [ ! -e "${BTFCMETA}/${HASHOFPATH}.torrent" ]; then
+     if   [ -e "${BTFCTMP}/${NAME}.torrent" ] && [ ! -e "${BTFCMETA}/${NAME}.torrent" ]; then
        leech
-     elif [ -e "${BTFCTMP}/${HASHOFPATH}.torrent" ] && [   -e "${BTFCMETA}/${HASHOFPATH}.torrent" ]; then
-       if ! diff -q "${BTFCTMP}/${HASHOFPATH}.torrent" "${BTFCMETA}/${HASHOFPATH}.torrent" ; then
+     elif [ -e "${BTFCTMP}/${NAME}.torrent" ] && [   -e "${BTFCMETA}/${NAME}.torrent" ]; then
+       if ! diff -q "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent" ; then
          leech
 # .... fi
        fi
      fi
 # .. if ! diff -r ~/.btfccache/hash_of_pathname/folder ~/folder (different)
-     install -d -m 700 "${BTFCCACHE}/${HASHOFPATH}/${FULLPATH##*/}"
-     if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${HASHOFPATH}/${FULLPATH##*/}/" ; then
+     install -d -m 700 "${BTFCCACHE}/${NAME}"
+     if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" ; then
 # .... stop client
        kill_transmissioncli
 # .. else
@@ -276,8 +281,9 @@ elif [ "$ACTION" = "clone" ]; then
        sleep $WAITSECONDS
 # .. fi
      fi
-# .. run btfc -i [-l] [-p] [-d directory] [-P PORT] [-s seconds]
-     ${0} -i $HARDLINK $PRUNE -d $FULLPATH -P $PORT -s $WAITSECONDS -w $WATCH $STATUS &
+# .. run btfc -i [-l] [-p] [-d save_directory] [-P PORT] [-s seconds]
+     ${0} -i $HARDLINK $PRUNE -d ${FULLPATH%/*} -N $NAME -P $PORT -t $WAITSECONDS -w $WATCH $STATUS &
+elif [ "$ACTION" = "status" ]; then
 else
   exit 1
 fi
