@@ -87,38 +87,91 @@ copy_path_to_cache() {
       exiterror 1 "Can't sha1 the path."
     fi
   else
-    rsync -rq $RSYNCCHECK $1 "${FULLPATH}/" "${BTFCCACHE}/${NAME}/"
+    return rsync -rq $RSYNCCHECK $1 "${FULLPATH}/" "${BTFCCACHE}/${NAME}/"
   fi
 }
 
 copy_to_fullpath() {
   # ...... if -p prune: try rsync --delete
-  rsync -rq $RSYNCCHECK $RSYNCDELETE "${BTFCCACHE}/${NAME}/" "${FULLPATH}/"
+  return rsync -rq $RSYNCCHECK $RSYNCDELETE "${BTFCCACHE}/${NAME}/" "${FULLPATH}/"
 }
 
 
-make_torrent() { #TODO XXXXX
-  # ...... rsync ~/folder/ ~/.btfccache/hash_of_pathname/folder/ (or if -l, rm -rf ~/.btfccache/hash_of_pathname/folder + cp -rl for speed)
+make_torrent() {
+  ########## $1 = NAME
+  # ...... rsync ~/folder/ ~/.btfccache/folder/ (or if -l, rm -rf ~/.btfccache/folder + cp -rl for speed)
   copy_path_to_cache --delete
-  # ...... create ~/.btfctmp/folder.torrent file from ~/.btfccache/hash_of_pathname/folder
+  # ...... create ~/.btfctmp/folder.torrent file from ~/.btfccache/folder
+  ########## modified from \
+  # http://edwardslab.bmcb.georgetown.edu/software/bittorrent_for_clusters.html
+  if [ -f "${BTFCCACHE}/${NAME}" ] ; then
+    transmission-create -p $TRACKERURL \
+      -o "${BTFCMETA}/${NAME}.torrent" "${BTFCCACHE}/${NAME}"
+    chmod 644 "${BTFCMETA}/${NAME}.torrent"
+    HASH=`transmission-show ${BTFCMETA}/${NAME}.torrent | grep 'Hash: ' | awk '{print $2}'`
+    #echo "Made torrent file for file $NAME." >&2
+  elif [ -d "${BTFCCACHE}/${NAME}" ] ; then
+    transmission-create -p $TRACKERURL \
+      -o "${BTFCMETA}/${NAME}.torrent" "${BTFCCACHE}/${NAME}"
+    chmod 644 "${BTFCMETA}/${NAME}.torrent"
+    HASH=`transmission-show ${BTFCMETA}/${NAME}.torrent | grep 'Hash: ' | awk '{print $2}'`
+    #echo "Made torrent file for directory $NAME." >&2
+  else
+    echo "ERROR: No such file or directory $NAME." >&2
+  fi
 }
 
 
-start_transmissioncli() { #TODO XXXXX
+start_transmissioncli() {
   # ...... run torrent client with metadata from ~/.btfcmeta/folder.torrent and saving data to ~/.btfccache/folder
-  # ...... on complete: rsync with (-c default, -t speed) and with backup or save conflict copy to ~/btfc/folder
-  copy_to_fullpath && STATUS="-S"
+  ########## launch transmission-cli $NAME, BTFCMETA/$NAME{.pid,.log}
+  if [ -e "${BTFCMETA}/${NAME}.torrent" ]; then
+    umask 077
+    transmission-cli -p $PORT -er -v -w "${BTFCCACHE}" "${BTFCMETA}/${NAME}.torrent" \
+      >"${BTFCMETA}/${NAME}.log" 2>&1 &
+    echo $! >"${BTFCMETA}/${NAME}.pid"
+    umask 022
+    sleep 1
+  else
+    echo "ERROR: Torrent meta file not found: ${BTFCMETA}/${NAME}.torrent" >&2
+    exiterror 1
+  fi
 }
 
 
-kill_transmissioncli() { #TODO XXXXX
+wait_for_complete() {
+  while validpid "${BTFCMETA}/${NAME}.pid" ; do
+    ########## Look for "Complete" or "Seeding" in log
+    if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
+      # ...... on complete: rsync with (-c default, -t speed) and with backup or save conflict copy to ~/btfc/folder
+      copy_to_fullpath && STATUS="-S"
+    elif cat "${BTFCMETA}/${NAME}.log" | grep 'Seeding,' >/dev/null ; then
+      # ...... on complete: rsync with (-c default, -t speed) and with backup or save conflict copy to ~/btfc/folder
+      copy_to_fullpath && STATUS="-S"
+    fi
+  done &
+}
 
+########## modified from \
+# http://edwardslab.bmcb.georgetown.edu/software/bittorrent_for_clusters.html
+kill_transmissioncli() {
+  ########## kill BTFCMETA/$NAME.pid
+  if [ -f "${BTFCMETA}/${NAME}.pid" ]; then
+    if validpid "${BTFCMETA}/${NAME}.pid" ; then
+      kill `cat ${BTFCMETA}/${NAME}.pid` >/dev/null 2>&1
+      sleep 1
+      if validpid "${BTFCMETA}/${NAME}.pid" ; then
+        kill -9 `cat ${BTFCMETA}/${NAME}.pid` >/dev/null 2>&1
+      fi
+    fi
+    rm "${BTFCMETA}/${NAME}.pid"
+  fi
 }
 
 
 prune_by_grep() { #TODO XXXXX
   if [ "$PRUNE" = "-p" ]; then
-    # if grep file name not in .torrent, unlink the .btfccache/hash_of_pathname/folder/path/file
+    # if grep file name not in .torrent, unlink the .btfccache/folder/path/file
   fi
 }
 
@@ -154,14 +207,15 @@ leech() {
   kill_transmissioncli
   # ...... if seeding but .torrent different then
   if [ "$STATUS" = "-S" ]; then
-    # ........ rsync ~/folder/ ~/.btfccache/hash_of_pathname/folder/ (or if -l, rm -rf ~/.btfccache/hash_of_pathname/folder + cp -rl for speed)
+    # ........ rsync ~/folder/ ~/.btfccache/folder/ (or if -l, rm -rf ~/.btfccache/folder + cp -rl for speed)
     copy_path_to_cache
     # ...... fi
   fi
   mv "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent"
-  # ...... if -p prune: try if grep file name not in .torrent, unlink the .btfccache/hash_of_pathname/folder/path/file
+  # ...... if -p prune: try if grep file name not in .torrent, unlink the .btfccache/folder/path/file
   [ "$PRUNE" = "-p" ] && prune_by_grep
   start_transmissioncli
+  wait_for_complete
 }
 
 while getopts w:d:N:P:t:icslpSLvh o; do
@@ -237,15 +291,15 @@ if [ "$ACTION" = "init" ]; then
 # .. -s for INTERVAL in seconds
 # .. if client not running
      if ! validpid ${NAME} ; then
-# .... if ! diff -r ~/.btfccache/hash_of_pathname/folder ~/folder (different)
+# .... if ! diff -r ~/.btfccache/folder ~/folder (different)
        install -d -m 700 "${BTFCCACHE}/${NAME}"
        if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" ; then
-         make_torrent
+         make_torrent ${NAME}
 # .... fi
        fi
 # .... if ~/.btfcmeta/folder.torrent not exist
        if [ ! -e "${BTFCMETA}/${NAME}.torrent" ]; then
-         make_torrent
+         make_torrent ${NAME}
 # .... fi
        fi
 # .... PUBLISH (using the copy+git commit strategy) from ~/.btfctmp/folder.torrent to ~/gitsync (in gtfc if gitsync exists)
@@ -270,7 +324,7 @@ elif [ "$ACTION" = "clone" ]; then
 # .... fi
        fi
      fi
-# .. if ! diff -r ~/.btfccache/hash_of_pathname/folder ~/folder (different)
+# .. if ! diff -r ~/.btfccache/folder ~/folder (different)
      install -d -m 700 "${BTFCCACHE}/${NAME}"
      if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" ; then
 # .... stop client
