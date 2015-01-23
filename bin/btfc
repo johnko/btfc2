@@ -155,7 +155,7 @@ diff_cache_folder(){
 # .. fi
   fi
 # .. run btfc -i [-l] [-p] [-d save_directory] [-P PORT] [-s seconds]
-  ${MYCOMMAND} -i $HARDLINK $PRUNE -d ${FULLPATH%/*} -N $NAME -P $PORT -t $WAITSECONDS -w $WATCH $STATUS &
+  ${MYCOMMAND} -i $HARDLINK $PRUNE -d ${FULLPATH%/*} -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH $STATUS $TRACKERURL &
 }
 
 
@@ -236,13 +236,14 @@ leech() {
   wait_for_complete
 }
 
-while getopts w:d:N:P:t:icslpSLvh o; do
+while getopts w:d:N:P:t:I:icslpSLvh o; do
   case "$o" in
     w) WATCH="${OPTARG}" ;;
     d) PATH="${OPTARG}" ;;
     N) NAME="${OPTARG}" ;;
     P) PORT="${OPTARG}" ;;
-    t) WAITSECONDS="${OPTARG}" ;;
+    t) TRACKERURL="${TRACKERURL} -t ${OPTARG}" ;;
+    I) WAITSECONDS="${OPTARG}" ;;
     i) ACTION="init" ;;
     c) ACTION="clone" ;;
     s) ACTION="status" ;;
@@ -326,7 +327,7 @@ if [ "$ACTION" = "init" ]; then
 # .. fi
      fi
 # .. run btfc -c [-l] [-p] [-d source_directory] [-P PORT] [-s seconds]
-     ${0} -c $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -t $WAITSECONDS -w $WATCH $STATUS &
+     ${0} -c $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH $STATUS $TRACKERURL &
 #
 elif [ "$ACTION" = "clone" ]; then
 # btfc -c [-l] [-p] [-d directory] [-P PORT] [-s seconds]
