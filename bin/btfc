@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150121-075208
+SCRIPTVERSION=150123-184954
 
 
 ########## Variables
@@ -343,6 +343,22 @@ elif [ "$ACTION" = "clone" ]; then
        fi
      fi
 elif [ "$ACTION" = "status" ]; then
+  if pgrep -lf transmission-cli | grep '\-er \-v' >/dev/null 2>&1 ; then
+    for i in `pgrep -lf transmission-cli | grep '\-er \-v' \
+      | awk '{print $NF}'` ; do
+      STATS=`transmission-show -s "$i" \
+        | egrep -o '(Name.*|\.\.\..*)' \
+        | awk '{$1=""; print}' | tr '\n' ' '`
+      if echo "$STATS" | grep error >/dev/null 2>&1 ; then
+        STATS="err err"
+      fi
+      SIZE=`transmission-show "$i" | egrep '(Total Size:)' \
+        | awk -F: '{print $2}' | tr '\n' ' '`
+      HASH=`transmission-show "$i" | egrep '(Hash:)' \
+        | awk -F: '{print $2}' | tr '\n' ' '`
+      echo "$STATS $SIZE $HASH $i"
+    done | grep -v 'no match' | column -t
+  fi
 else
   exit 1
 fi
