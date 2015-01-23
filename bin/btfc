@@ -38,7 +38,7 @@ SCRIPTVERSION=150121-075208
 BTFCMETA="~/.btfcmeta"
 BTFCCACHE="~/.btfccache"
 BTFCTMP="~/.btfctmp"
-
+MYCOMMAND="$0"
 
 ########## Functions
 
@@ -92,8 +92,8 @@ copy_path_to_cache() {
 }
 
 copy_to_fullpath() {
-  # ...... if -p prune: try rsync --delete
-  return rsync -rq $RSYNCCHECK $RSYNCDELETE "${BTFCCACHE}/${NAME}/" "${FULLPATH}/"
+  # ...... if -p prune: try rsync --delete, skip newer files
+  return rsync -ruq $RSYNCCHECK $RSYNCDELETE "${BTFCCACHE}/${NAME}/" "${FULLPATH}/"
 }
 
 
@@ -139,15 +139,33 @@ start_transmissioncli() {
 }
 
 
+diff_cache_folder(){
+  copy_to_fullpath
+# .. if ! diff -r ~/.btfccache/folder ~/folder (different)
+  install -d -m 700 "${BTFCCACHE}/${NAME}"
+  if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" ; then
+# .... stop client
+    kill_transmissioncli
+# .. else
+  else
+# ...... on complete: rsync with (-c default, -t speed) and with backup or save conflict copy to ~/btfc/folder
+    STATUS="-S"
+# .... sleep for INTERVAL seconds
+    sleep $WAITSECONDS
+# .. fi
+  fi
+# .. run btfc -i [-l] [-p] [-d save_directory] [-P PORT] [-s seconds]
+  ${MYCOMMAND} -i $HARDLINK $PRUNE -d ${FULLPATH%/*} -N $NAME -P $PORT -t $WAITSECONDS -w $WATCH $STATUS &
+}
+
+
 wait_for_complete() {
   while validpid "${BTFCMETA}/${NAME}.pid" ; do
     ########## Look for "Complete" or "Seeding" in log
     if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
-      # ...... on complete: rsync with (-c default, -t speed) and with backup or save conflict copy to ~/btfc/folder
-      copy_to_fullpath && STATUS="-S"
+      diff_cache_folder
     elif cat "${BTFCMETA}/${NAME}.log" | grep 'Seeding,' >/dev/null ; then
-      # ...... on complete: rsync with (-c default, -t speed) and with backup or save conflict copy to ~/btfc/folder
-      copy_to_fullpath && STATUS="-S"
+      diff_cache_folder
     fi
   done &
 }
@@ -324,19 +342,6 @@ elif [ "$ACTION" = "clone" ]; then
 # .... fi
        fi
      fi
-# .. if ! diff -r ~/.btfccache/folder ~/folder (different)
-     install -d -m 700 "${BTFCCACHE}/${NAME}"
-     if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" ; then
-# .... stop client
-       kill_transmissioncli
-# .. else
-     else
-# .... sleep for INTERVAL seconds
-       sleep $WAITSECONDS
-# .. fi
-     fi
-# .. run btfc -i [-l] [-p] [-d save_directory] [-P PORT] [-s seconds]
-     ${0} -i $HARDLINK $PRUNE -d ${FULLPATH%/*} -N $NAME -P $PORT -t $WAITSECONDS -w $WATCH $STATUS &
 elif [ "$ACTION" = "status" ]; then
 else
   exit 1
