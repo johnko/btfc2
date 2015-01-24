@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150124-031225
+SCRIPTVERSION=150124-033616
 
 
 ########## Variables
@@ -89,12 +89,6 @@ copy_path_to_cache() {
   fi
 }
 
-copy_to_fullpath() {
-  # ...... if -p prune: try rsync --delete, skip newer files
-  rsync -ruq $RSYNCCHECK $RSYNCDELETE "${BTFCCACHE}/${NAME}/" "${FULLPATH}/"
-  return $?
-}
-
 
 make_torrent() {
   ########## $1 = NAME
@@ -121,25 +115,9 @@ make_torrent() {
 }
 
 
-start_transmissioncli() {
-  # ...... run torrent client with metadata from ~/.btfcmeta/folder.torrent and saving data to ~/.btfccache/folder
-  ########## launch transmission-cli $NAME, BTFCMETA/$NAME{.pid,.log}
-  if [ -e "${BTFCMETA}/${NAME}.torrent" ]; then
-    umask 077
-    transmission-cli -p $PORT -er -v -w "${BTFCCACHE}" "${BTFCMETA}/${NAME}.torrent" \
-      >"${BTFCMETA}/${NAME}.log" 2>&1 &
-    echo $! >"${BTFCMETA}/${NAME}.pid"
-    umask 022
-    sleep 1
-  else
-    echo "ERROR: Torrent meta file not found: ${BTFCMETA}/${NAME}.torrent" >&2
-    exiterror 1
-  fi
-}
-
-
 diff_cache_folder(){
-  copy_to_fullpath
+# ...... if -p prune: try rsync --delete, skip newer files
+  rsync -ruq $RSYNCCHECK $RSYNCDELETE "${BTFCCACHE}/${NAME}/" "${FULLPATH}/"
 # .. if ! diff -r ~/.btfccache/folder ~/folder (different)
   install -d -m 700 "${BTFCCACHE}/${NAME}"
   if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" >/dev/null 2>&1 ; then
@@ -157,17 +135,6 @@ diff_cache_folder(){
   ${MYCOMMAND} -i $HARDLINK $PRUNE -d ${FULLPATH%/*} -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH $STATUS $TRACKERURL &
 }
 
-
-wait_for_complete() {
-  while validpid "${BTFCMETA}/${NAME}.pid" ; do
-    ########## Look for "Complete" or "Seeding" in log
-    if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
-      diff_cache_folder
-    elif cat "${BTFCMETA}/${NAME}.log" | grep 'Seeding,' >/dev/null ; then
-      diff_cache_folder
-    fi
-  done &
-}
 
 ########## modified from \
 # http://edwardslab.bmcb.georgetown.edu/software/bittorrent_for_clusters.html
@@ -221,7 +188,7 @@ publish_using() {
 
 leech() {
   # ...... stop client
-  kill_transmissioncli
+  [ "$1" != "nokill" ] && kill_transmissioncli
   # ...... if seeding but .torrent different then
   if [ "$STATUS" = "-S" ]; then
     # ........ rsync ~/folder/ ~/.btfccache/folder/ (or if -l, rm -rf ~/.btfccache/folder + cp -rl for speed)
@@ -231,8 +198,29 @@ leech() {
   mv "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent"
   # ...... if -p prune: try if grep file name not in .torrent, unlink the .btfccache/folder/path/file
   [ "$PRUNE" = "-p" ] && prune_by_grep
-  start_transmissioncli
-  wait_for_complete
+  if ! validpid "${BTFCMETA}/${NAME}.pid" ; then
+    # ...... run torrent client with metadata from ~/.btfcmeta/folder.torrent and saving data to ~/.btfccache/folder
+    ########## launch transmission-cli $NAME, BTFCMETA/$NAME{.pid,.log}
+    if [ -e "${BTFCMETA}/${NAME}.torrent" ]; then
+      umask 077
+      transmission-cli -p $PORT -er -v -w "${BTFCCACHE}" "${BTFCMETA}/${NAME}.torrent" \
+        >"${BTFCMETA}/${NAME}.log" 2>&1 &
+      echo $! >"${BTFCMETA}/${NAME}.pid"
+      umask 022
+      sleep 1
+    else
+      echo "ERROR: Torrent meta file not found: ${BTFCMETA}/${NAME}.torrent" >&2
+      exiterror 1
+    fi
+  fi
+  while validpid "${BTFCMETA}/${NAME}.pid" ; do
+    ########## Look for "Complete" or "Seeding" in log
+    if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
+      diff_cache_folder
+    elif cat "${BTFCMETA}/${NAME}.log" | grep 'Seeding,' >/dev/null ; then
+      diff_cache_folder
+    fi
+  done &
 }
 
 while getopts w:d:N:P:t:I:icslpSLvh o; do
@@ -344,6 +332,9 @@ elif [ "$ACTION" = "clone" ]; then
      elif [ -e "${BTFCTMP}/${NAME}.torrent" ] && [   -e "${BTFCMETA}/${NAME}.torrent" ]; then
        if ! diff -q "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent" >/dev/null 2>&1 ; then
          leech
+       else
+         ########## same
+         leech nokill
 # .... fi
        fi
      fi
