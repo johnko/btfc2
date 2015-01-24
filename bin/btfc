@@ -190,15 +190,17 @@ publish_using() {
 
 leech() {
   # ...... stop client
-  [ "$1" != "nokill" ] && kill_transmissioncli
+  if [ "$1" != "nokill" ]; then
+    kill_transmissioncli
+    [ -e "${BTFCTMP}/${NAME}.torrent" ] \
+      && mv "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent"
+  fi
   # ...... if seeding but .torrent different then
   if [ "$STATUS" = "-S" ]; then
     # ........ rsync ~/folder/ ~/.btfccache/folder/ (or if -l, rm -rf ~/.btfccache/folder + cp -rl for speed)
     copy_path_to_cache
     # ...... fi
   fi
-  [ -e "${BTFCTMP}/${NAME}.torrent" ] \
-    && mv "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent"
   # ...... if -p prune: try if grep file name not in .torrent, unlink the .btfccache/folder/path/file
   [ "$PRUNE" = "-p" ] && prune_by_grep
   if ! validpid "${BTFCMETA}/${NAME}.pid" ; then
