@@ -142,7 +142,7 @@ diff_cache_folder(){
   copy_to_fullpath
 # .. if ! diff -r ~/.btfccache/folder ~/folder (different)
   install -d -m 700 "${BTFCCACHE}/${NAME}"
-  if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" ; then
+  if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" >/dev/null 2>&1 ; then
 # .... stop client
     kill_transmissioncli
 # .. else
@@ -316,7 +316,7 @@ if [ "$ACTION" = "init" ]; then
      if ! validpid ${NAME} ; then
 # .... if ! diff -r ~/.btfccache/folder ~/folder (different)
        install -d -m 700 "${BTFCCACHE}/${NAME}"
-       if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" ; then
+       if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" >/dev/null 2>&1 ; then
          make_torrent ${NAME}
 # .... fi
        fi
@@ -342,7 +342,7 @@ elif [ "$ACTION" = "clone" ]; then
      if   [ -e "${BTFCTMP}/${NAME}.torrent" ] && [ ! -e "${BTFCMETA}/${NAME}.torrent" ]; then
        leech
      elif [ -e "${BTFCTMP}/${NAME}.torrent" ] && [   -e "${BTFCMETA}/${NAME}.torrent" ]; then
-       if ! diff -q "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent" ; then
+       if ! diff -q "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent" >/dev/null 2>&1 ; then
          leech
 # .... fi
        fi
