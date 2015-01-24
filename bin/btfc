@@ -311,7 +311,9 @@ if [ "$ACTION" = "init" ]; then
 # .. fi
      fi
 # .. run btfc -c [-l] [-p] [-d source_directory] [-P PORT] [-s seconds]
-     ${MYCOMMAND} -c $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH $STATUS $TRACKERURL &
+     if ! pgrep -lf "${MYCOMMAND} -c $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH" >/dev/null 2>&1 ;
+       ${MYCOMMAND} -c $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH $STATUS $TRACKERURL &
+     fi
 #
 elif [ "$ACTION" = "clone" ]; then
 # btfc -c [-l] [-p] [-d directory] [-P PORT] [-s seconds]
