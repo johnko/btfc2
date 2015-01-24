@@ -213,14 +213,6 @@ leech() {
       exiterror 1
     fi
   fi
-  while validpid "${BTFCMETA}/${NAME}.pid" ; do
-    ########## Look for "Complete" or "Seeding" in log
-    if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
-      diff_cache_folder
-    elif cat "${BTFCMETA}/${NAME}.log" | grep 'Seeding,' >/dev/null ; then
-      diff_cache_folder
-    fi
-  done &
 }
 
 while getopts w:d:N:P:t:I:icslpSLvh o; do
@@ -338,6 +330,20 @@ elif [ "$ACTION" = "clone" ]; then
 # .... fi
        fi
      fi
+     while validpid "${BTFCMETA}/${NAME}.pid" ; do
+       ########## Look for "Complete" or "Seeding" in log
+       if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
+         diff_cache_folder
+       elif cat "${BTFCMETA}/${NAME}.log" | grep 'Seeding,' >/dev/null ; then
+         diff_cache_folder
+       fi
+       if [ -e "${BTFCTMP}/${NAME}.torrent" ] && [   -e "${BTFCMETA}/${NAME}.torrent" ]; then
+         if ! diff -q "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent" >/dev/null 2>&1 ; then
+           leech
+         fi
+       fi
+       sleep $WAITSECONDS
+     done &
 elif [ "$ACTION" = "status" ]; then
   if pgrep -lf transmission-cli | grep '\-er \-v' >/dev/null 2>&1 ; then
     for i in `pgrep -lf transmission-cli | grep '\-er \-v' \
