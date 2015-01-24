@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150124-061429
+SCRIPTVERSION=150124-062517
 
 
 ########## Variables
@@ -179,8 +179,8 @@ publish_using() {
   elif [ "$1" = "copy-git-add-commit" ]; then
     cp "${BTFCMETA}/${NAME}.torrent" "${WATCH}/${NAME}.torrent"
     cd "${WATCH}"
-    git add "${NAME}.torrent"
-    git commit -m "updated ${NAME}.torrent"
+    git add "${NAME}.torrent" >/dev/null
+    git commit -m "updated ${NAME}.torrent" >/dev/null
     cd -
   fi
 }
