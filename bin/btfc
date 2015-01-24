@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150124-063415
+SCRIPTVERSION=150124-080519
 
 
 ########## Variables
@@ -189,6 +189,8 @@ publish_using() {
 
 
 leech() {
+  # .. SUBSCRIBE (using copy strategy) from ~/gitsync to ~/.btfctmp/folder.torrent
+  subscribe_using ${SUBSCRIBE}
   # ...... stop client
   [ "$1" != "nokill" ] && kill_transmissioncli
   # ...... if seeding but .torrent different then
@@ -316,8 +318,6 @@ if [ "$ACTION" = "init" ]; then
 elif [ "$ACTION" = "clone" ]; then
 # btfc -c [-l] [-p] [-d directory] [-P PORT] [-s seconds]
 # .. -c means clone
-# .. SUBSCRIBE (using copy strategy) from ~/gitsync to ~/.btfctmp/folder.torrent
-     subscribe_using ${SUBSCRIBE}
 # .. if ! diff ~/.btfctmp/folder.torrent ~/.btfcmeta/folder.torrent (different)
      if   [ -e "${BTFCTMP}/${NAME}.torrent" ] && [ ! -e "${BTFCMETA}/${NAME}.torrent" ]; then
        leech
