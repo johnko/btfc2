@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150124-062517
+SCRIPTVERSION=150124-063415
 
 
 ########## Variables
@@ -112,6 +112,8 @@ make_torrent() {
   else
     echo "ERROR: No such file or directory $NAME." >&2
   fi
+# .... PUBLISH (using the copy+git commit strategy) from ~/.btfctmp/folder.torrent to ~/gitsync (in gtfc if gitsync exists)
+  publish_using ${PUBLISH}
 }
 
 
@@ -305,14 +307,10 @@ if [ "$ACTION" = "init" ]; then
          make_torrent ${NAME}
 # .... fi
        fi
-# .... PUBLISH (using the copy+git commit strategy) from ~/.btfctmp/folder.torrent to ~/gitsync (in gtfc if gitsync exists)
-       publish_using ${PUBLISH}
        STATUS="-S"
-# .. fi
-     fi
-# .. run btfc -c [-l] [-p] [-d source_directory] [-P PORT] [-s seconds]
-     if ! pgrep -lf "${MYCOMMAND} -c $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH" >/dev/null 2>&1 ; then
+# .... run btfc -c [-l] [-p] [-d source_directory] [-P PORT] [-s seconds]
        ${MYCOMMAND} -c $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH $STATUS $TRACKERURL &
+# .. fi
      fi
 #
 elif [ "$ACTION" = "clone" ]; then
