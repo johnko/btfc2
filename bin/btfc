@@ -29,12 +29,12 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150124-033616
+SCRIPTVERSION=150124-035534
 
 
 ########## Variables
 
-
+#PRIVATETORRENT="-p" #uncomment to set private flag on created .torrents
 BTFCMETA="${HOME}/.btfcmeta"
 BTFCCACHE="${HOME}/.btfccache"
 BTFCTMP="${HOME}/.btfctmp"
@@ -98,13 +98,13 @@ make_torrent() {
   ########## modified from \
   # http://edwardslab.bmcb.georgetown.edu/software/bittorrent_for_clusters.html
   if [ -f "${BTFCCACHE}/${NAME}" ] ; then
-    transmission-create -p $TRACKERURL \
+    transmission-create $PRIVATETORRENT $TRACKERURL \
       -o "${BTFCMETA}/${NAME}.torrent" "${BTFCCACHE}/${NAME}"
     chmod 644 "${BTFCMETA}/${NAME}.torrent"
     HASH=`transmission-show ${BTFCMETA}/${NAME}.torrent | grep 'Hash: ' | awk '{print $2}'`
     #echo "Made torrent file for file $NAME." >&2
   elif [ -d "${BTFCCACHE}/${NAME}" ] ; then
-    transmission-create -p $TRACKERURL \
+    transmission-create $PRIVATETORRENT $TRACKERURL \
       -o "${BTFCMETA}/${NAME}.torrent" "${BTFCCACHE}/${NAME}"
     chmod 644 "${BTFCMETA}/${NAME}.torrent"
     HASH=`transmission-show ${BTFCMETA}/${NAME}.torrent | grep 'Hash: ' | awk '{print $2}'`
@@ -132,7 +132,7 @@ diff_cache_folder(){
 # .. fi
   fi
 # .. run btfc -i [-l] [-p] [-d save_directory] [-P PORT] [-s seconds]
-  ${MYCOMMAND} -i $HARDLINK $PRUNE -d ${FULLPATH%/*} -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH $STATUS $TRACKERURL &
+  ${MYCOMMAND} -i $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH $STATUS $TRACKERURL &
 }
 
 
