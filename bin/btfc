@@ -52,13 +52,13 @@ exiterror() {
 
 
 getfullpath() {
-  if [ -d "${PATH}" ]; then
-    cd "${PATH}"
+  if [ -d "${BTFCDATA}" ]; then
+    cd "${BTFCDATA}"
     FULLPATH=`pwd`
     cd -
     echo $FULLPATH
   else
-    exiterror 1 "${PATH} is not a directory."
+    exiterror 1 "${BTFCDATA} is not a directory."
   fi
 }
 
@@ -238,7 +238,7 @@ leech() {
 while getopts w:d:N:P:t:I:icslpSLvh o; do
   case "$o" in
     w) WATCH="${OPTARG}" ;;
-    d) PATH="${OPTARG}" ;;
+    d) BTFCDATA="${OPTARG}" ;;
     N) NAME="${OPTARG}" ;;
     P) PORT="${OPTARG}" ;;
     t) TRACKERURL="${TRACKERURL} -t ${OPTARG}" ;;
@@ -261,8 +261,8 @@ done
 if [ "x" = "x${WATCH}" ]; then
   WATCH="~/gitsync"
 fi
-if [ "x" = "x${PATH}" ]; then
-  PATH="~/btfc"
+if [ "x" = "x${BTFCDATA}" ]; then
+  BTFCDATA="~/btfc"
 fi
 PORT=`echo $PORT | grep -o '[0-9]*'`
 if [ "x" = "x${PORT}" ]; then
