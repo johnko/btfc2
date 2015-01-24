@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150124-035534
+SCRIPTVERSION=150124-061429
 
 
 ########## Variables
@@ -311,7 +311,7 @@ if [ "$ACTION" = "init" ]; then
 # .. fi
      fi
 # .. run btfc -c [-l] [-p] [-d source_directory] [-P PORT] [-s seconds]
-     if ! pgrep -lf "${MYCOMMAND} -c $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH" >/dev/null 2>&1 ;
+     if ! pgrep -lf "${MYCOMMAND} -c $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH" >/dev/null 2>&1 ; then
        ${MYCOMMAND} -c $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH $STATUS $TRACKERURL &
      fi
 #
