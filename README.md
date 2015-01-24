@@ -8,6 +8,27 @@ INIT: It copies ~/btfc to ~/.btfccache/btfc, creates btfc.torrent, publishes the
 
 CLONE: It fetches the btfc.torrent (from gtfc), leeches/seeds to ~/.btfccache/btfc, once complete then it rsync skipping newer to ~/btfc then diff ~/.btfccache/btfc and ~/btfc to decide if it needs to call INIT.
 
+# Quick Usage
+
+First you need a working [gtfc cluster](https://github.com/johnko/gtfc).
+
+Then, on the source:
+
+```
+mkdir ~/btfc
+date > ~/btfc/newfile
+btfc -i -t udp://tracker.publicbt.com:80
+```
+
+Then, on the peers:
+
+```
+mkdir ~/btfc
+btfc -c
+btfc -s
+```
+
+
 # Speedup with hard links
 
 If you are careful, you can use the "-l" option to speed up the INIT copy step with hard links. This options is UNSAFE if you will be appending or editing files in ~/btfc without first deleting them. This option is good for files that never change, and only if new files are added, but never modified.
