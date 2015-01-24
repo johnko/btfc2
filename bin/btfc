@@ -35,9 +35,9 @@ SCRIPTVERSION=150124-025301
 ########## Variables
 
 
-BTFCMETA="~/.btfcmeta"
-BTFCCACHE="~/.btfccache"
-BTFCTMP="~/.btfctmp"
+BTFCMETA="${HOME}/.btfcmeta"
+BTFCCACHE="${HOME}/.btfccache"
+BTFCTMP="${HOME}/.btfctmp"
 MYCOMMAND="$0"
 
 ########## Functions
@@ -78,8 +78,8 @@ validpid() {
 copy_path_to_cache() {
   if [ "$HARDLINK" = "-l" ]; then
     #hardcoded so we don't delete /
-    if [ -d "~/.btfccache/${NAME}" ]; then
-      rm -r "~/.btfccache/${NAME}" || exiterror 1 "Can't rm -r ~/.btfccache/${NAME}"
+    if [ -d "${HOME}/.btfccache/${NAME}" ]; then
+      rm -r "${HOME}/.btfccache/${NAME}" || exiterror 1 "Can't rm -r ${HOME}/.btfccache/${NAME}"
     fi
     install -d -m 700 "${BTFCCACHE}/${NAME}"
     cp -rl "${FULLPATH}" "${BTFCCACHE}/" || exiterror 1 "Can't cp -rl ${FULLPATH} ${BTFCCACHE}/"
@@ -259,10 +259,10 @@ done
 
 ########## default variable settings if not found
 if [ "x" = "x${WATCH}" ]; then
-  WATCH="~/gitsync"
+  WATCH="${HOME}/gitsync"
 fi
 if [ "x" = "x${BTFCDATA}" ]; then
-  BTFCDATA="~/btfc"
+  BTFCDATA="${HOME}/btfc"
 fi
 PORT=`echo $PORT | grep -o '[0-9]*'`
 if [ "x" = "x${PORT}" ]; then
