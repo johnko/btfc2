@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150124-080958
+SCRIPTVERSION=150125-013759
 
 
 ########## Variables
@@ -298,7 +298,7 @@ if [ "$ACTION" = "init" ]; then
 # .. -P for TCP/IP port
 # .. -s for INTERVAL in seconds
 # .. if client not running
-     if ! validpid ${NAME} ; then
+     if ! validpid "${BTFCMETA}/${NAME}.pid" ; then
 # .... if ! diff -r ~/.btfccache/folder ~/folder (different)
        install -d -m 700 "${BTFCCACHE}/${NAME}"
        if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" >/dev/null 2>&1 ; then
