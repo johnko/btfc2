@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150125-035305
+SCRIPTVERSION=150125-061802
 
 
 ########## Variables
@@ -141,6 +141,7 @@ diff_cache_folder(){
 ########## modified from \
 # http://edwardslab.bmcb.georgetown.edu/software/bittorrent_for_clusters.html
 kill_transmissioncli() {
+  STATUS="-L"
   ########## kill BTFCMETA/$NAME.pid
   if [ -f "${BTFCMETA}/${NAME}.pid" ]; then
     if validpid "${BTFCMETA}/${NAME}.pid" ; then
@@ -166,7 +167,9 @@ subscribe_using() {
   if [ "$1" = "copy" ]; then
     if [ "x" != "x${WATCH}" ]; then
       if [ -e "${WATCH}/${NAME}.torrent" ]; then
-        cp "${WATCH}/${NAME}.torrent" "${BTFCTMP}/${NAME}.torrent"
+        if ! diff -q "${WATCH}/${NAME}.torrent" "${BTFCTMP}/${NAME}.torrent" >/dev/null 2>&1 ; then
+               cp "${WATCH}/${NAME}.torrent" "${BTFCTMP}/${NAME}.torrent"
+        fi
       fi
     else
       exiterror 1 "-w is not specified."
@@ -190,10 +193,16 @@ publish_using() {
 
 leech() {
   # ...... stop client
-  if [ "$1" != "nokill" ]; then
-    kill_transmissioncli
-    [ -e "${BTFCTMP}/${NAME}.torrent" ] \
-      && mv "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent"
+  if [ -e "${BTFCTMP}/${NAME}.torrent" ]; then
+    if [ -e "${BTFCMETA}/${NAME}.torrent" ]; then
+      if ! diff -q "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent" >/dev/null 2>&1 ; then
+        kill_transmissioncli
+        cp "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent"
+      fi
+    else
+      kill_transmissioncli
+      cp "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent"
+    fi
   fi
   # ...... if seeding but .torrent different then
   if [ "$STATUS" = "-S" ]; then
@@ -322,17 +331,7 @@ elif [ "$ACTION" = "clone" ]; then
 # .. SUBSCRIBE (using copy strategy) from ~/gitsync to ~/.btfctmp/folder.torrent
      subscribe_using ${SUBSCRIBE}
 # .. if ! diff ~/.btfctmp/folder.torrent ~/.btfcmeta/folder.torrent (different)
-     if   [ -e "${BTFCTMP}/${NAME}.torrent" ] && [ ! -e "${BTFCMETA}/${NAME}.torrent" ]; then
-       leech
-     elif [ -e "${BTFCTMP}/${NAME}.torrent" ] && [   -e "${BTFCMETA}/${NAME}.torrent" ]; then
-       if ! diff -q "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent" >/dev/null 2>&1 ; then
-         leech
-       else
-         ########## same
-         leech nokill
-# .... fi
-       fi
-     fi
+     leech
      while validpid "${BTFCMETA}/${NAME}.pid" ; do
        ########## Look for "Complete" or "Seeding" in log
        if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
@@ -340,11 +339,8 @@ elif [ "$ACTION" = "clone" ]; then
        elif cat "${BTFCMETA}/${NAME}.log" | grep 'Seeding,' >/dev/null ; then
          diff_cache_folder
        fi
-       if [ -e "${BTFCTMP}/${NAME}.torrent" ] && [   -e "${BTFCMETA}/${NAME}.torrent" ]; then
-         if ! diff -q "${BTFCTMP}/${NAME}.torrent" "${BTFCMETA}/${NAME}.torrent" >/dev/null 2>&1 ; then
-           leech
-         fi
-       fi
+       subscribe_using ${SUBSCRIBE}
+       leech
        sleep $WAITSECONDS
      done &
 elif [ "$ACTION" = "status" ]; then
