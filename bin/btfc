@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150125-013759
+SCRIPTVERSION=150125-035305
 
 
 ########## Variables
@@ -208,7 +208,7 @@ leech() {
     ########## launch transmission-cli $NAME, BTFCMETA/$NAME{.pid,.log}
     if [ -e "${BTFCMETA}/${NAME}.torrent" ]; then
       umask 077
-      transmission-cli -p $PORT -er -v -w "${BTFCCACHE}" "${BTFCMETA}/${NAME}.torrent" \
+      transmission-cli -p $PORT -er -w "${BTFCCACHE}" "${BTFCMETA}/${NAME}.torrent" \
         >"${BTFCMETA}/${NAME}.log" 2>&1 &
       echo $! >"${BTFCMETA}/${NAME}.pid"
       umask 022
@@ -348,8 +348,8 @@ elif [ "$ACTION" = "clone" ]; then
        sleep $WAITSECONDS
      done &
 elif [ "$ACTION" = "status" ]; then
-  if pgrep -lf transmission-cli | grep '\-er \-v' >/dev/null 2>&1 ; then
-    for i in `pgrep -lf transmission-cli | grep '\-er \-v' \
+  if pgrep -lf transmission-cli | grep '\-er \-w' >/dev/null 2>&1 ; then
+    for i in `pgrep -lf transmission-cli | grep '\-er \-w' \
       | awk '{print $NF}'` ; do
       STATS=`transmission-show -s "$i" \
         | egrep -o '(Name.*|\.\.\..*)' \
