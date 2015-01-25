@@ -68,6 +68,8 @@ To use a tracker, pass the "-t URL" (tracker URL). For multiple trackers use "-t
 
 In Transmission's configuration file (mine is located at `~/.config/transmission/settings.json`), find the line with "lpd-enabled" and set it to `"lpd-enabled": true,`
 
+Note that enabling Local Peer Discovery means that anyone on your local network/wifi may be able to find out what you are torrenting.
+
 ### How do I publish a .torrent so that all my peers will be able to subscribe to it?
 
 My gtfc project is a good place to start: each peer will pull from each other using cron, git, SSH keys and fingerprints, excellent for small amounts of data like .torrent metadata.
