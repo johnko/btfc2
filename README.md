@@ -76,3 +76,7 @@ Note that enabling Local Peer Discovery means that anyone on your local network/
 My gtfc project is a good place to start: each peer will pull from each other using cron, git, SSH keys and fingerprints, excellent for small amounts of data like .torrent metadata.
 
 Or something like WebDAV, or a network file system, or a clustered file system, but at that scale, why would you need this?
+
+# Future work
+
+[ ] Look into using rtorrent as the torrent client because it supports the 'd.add_peer=host[:port]' command to manually add a peer (not for torrents marked "private")
