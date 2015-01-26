@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150126-074054
+SCRIPTVERSION=150126-075605
 
 
 ########## Variables
@@ -38,6 +38,7 @@ SCRIPTVERSION=150126-074054
 BTFCMETA="${HOME}/.btfcmeta"
 BTFCCACHE="${HOME}/.btfccache"
 BTFCTMP="${HOME}/.btfctmp"
+MYPID=""
 
 ########## Functions
 
@@ -201,6 +202,7 @@ run_if_not_running() {
       echo $! >"${BTFCMETA}/${NAME}.pid"
       umask 022
       sleep 1
+      MYPID="`cat ${BTFCMETA}/${NAME}.pid`"
     else
       exiterror 1 "Torrent meta file not found: ${BTFCMETA}/${NAME}.torrent"
     fi
@@ -247,7 +249,8 @@ btfc_client() {
      subscribe_using ${SUBSCRIBE}
 # .. if ! diff ~/.btfctmp/folder.torrent ~/.btfcmeta/folder.torrent (different)
      run_if_not_running
-     while validpid "${BTFCMETA}/${NAME}.pid" ; do
+     while [ "$MYPID" = "`cat ${BTFCMETA}/${NAME}.pid`" ] \
+       && validpid "${BTFCMETA}/${NAME}.pid" ; do
        ########## Look for "Complete" or "Seeding" in log
        if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
          diff_cache_folder
