@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150126-075605
+SCRIPTVERSION=150126-081018
 
 
 ########## Variables
@@ -249,8 +249,9 @@ btfc_client() {
      subscribe_using ${SUBSCRIBE}
 # .. if ! diff ~/.btfctmp/folder.torrent ~/.btfcmeta/folder.torrent (different)
      run_if_not_running
-     while [ "$MYPID" = "`cat ${BTFCMETA}/${NAME}.pid`" ] \
-       && validpid "${BTFCMETA}/${NAME}.pid" ; do
+     OLDPID="$MYPID"
+     while [ "$OLDPID" = "$MYPID" ] && validpid "${BTFCMETA}/${NAME}.pid" ; do
+       sleep $WAITSECONDS
        ########## Look for "Complete" or "Seeding" in log
        if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
          diff_cache_folder
@@ -259,7 +260,6 @@ btfc_client() {
        fi
        subscribe_using ${SUBSCRIBE}
        run_if_not_running
-       sleep $WAITSECONDS
      done &
 }
 
