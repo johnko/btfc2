@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150125-061802
+SCRIPTVERSION=150126-031141
 
 
 ########## Variables
@@ -38,7 +38,6 @@ SCRIPTVERSION=150125-061802
 BTFCMETA="${HOME}/.btfcmeta"
 BTFCCACHE="${HOME}/.btfccache"
 BTFCTMP="${HOME}/.btfctmp"
-MYCOMMAND="$0"
 
 ########## Functions
 
@@ -134,7 +133,7 @@ diff_cache_folder(){
 # .. fi
   fi
 # .. run btfc -i [-l] [-p] [-d save_directory] [-P PORT] [-s seconds]
-  ${MYCOMMAND} -i $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH $STATUS $TRACKERURL &
+  main_init
 }
 
 
@@ -229,6 +228,60 @@ leech() {
   fi
 }
 
+
+main_init() {
+# PSEUDO CODE
+#
+# btfc -i [-l] [-p] [-d directory] [-P PORT] [-s seconds]
+# .. -i init
+# .. rsync copy as default because safer, but we can specify -l for hardlink optional speed and save space
+# .. -p for prune
+# .. -d folder, like ~/btfc
+# .. -P for TCP/IP port
+# .. -s for INTERVAL in seconds
+# .. if client not running
+     if ! validpid "${BTFCMETA}/${NAME}.pid" ; then
+# .... if ! diff -r ~/.btfccache/folder ~/folder (different)
+       install -d -m 700 "${BTFCCACHE}/${NAME}"
+       if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" >/dev/null 2>&1 ; then
+         make_torrent ${NAME}
+# .... fi
+       fi
+# .... if ~/.btfcmeta/folder.torrent not exist
+       if [ ! -e "${BTFCMETA}/${NAME}.torrent" ]; then
+         make_torrent ${NAME}
+# .... fi
+       fi
+       STATUS="-S"
+# .... run btfc -c [-l] [-p] [-d source_directory] [-P PORT] [-s seconds]
+       mail_clone
+# .. fi
+     fi
+#
+}
+
+
+mail_clone() {
+# btfc -c [-l] [-p] [-d directory] [-P PORT] [-s seconds]
+# .. -c means clone
+# .. SUBSCRIBE (using copy strategy) from ~/gitsync to ~/.btfctmp/folder.torrent
+     subscribe_using ${SUBSCRIBE}
+# .. if ! diff ~/.btfctmp/folder.torrent ~/.btfcmeta/folder.torrent (different)
+     leech
+     while validpid "${BTFCMETA}/${NAME}.pid" ; do
+       ########## Look for "Complete" or "Seeding" in log
+       if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
+         diff_cache_folder
+       elif cat "${BTFCMETA}/${NAME}.log" | grep 'Seeding,' >/dev/null ; then
+         diff_cache_folder
+       fi
+       subscribe_using ${SUBSCRIBE}
+       leech
+       sleep $WAITSECONDS
+     done &
+}
+
+
 while getopts w:d:N:P:t:I:icslpSLvh o; do
   case "$o" in
     w) WATCH="${OPTARG}" ;;
@@ -297,52 +350,9 @@ fi
 
 
 if [ "$ACTION" = "init" ]; then
-# PSEUDO CODE
-#
-# btfc -i [-l] [-p] [-d directory] [-P PORT] [-s seconds]
-# .. -i init
-# .. rsync copy as default because safer, but we can specify -l for hardlink optional speed and save space
-# .. -p for prune
-# .. -d folder, like ~/btfc
-# .. -P for TCP/IP port
-# .. -s for INTERVAL in seconds
-# .. if client not running
-     if ! validpid "${BTFCMETA}/${NAME}.pid" ; then
-# .... if ! diff -r ~/.btfccache/folder ~/folder (different)
-       install -d -m 700 "${BTFCCACHE}/${NAME}"
-       if ! diff -r -q "${FULLPATH}/" "${BTFCCACHE}/${NAME}/" >/dev/null 2>&1 ; then
-         make_torrent ${NAME}
-# .... fi
-       fi
-# .... if ~/.btfcmeta/folder.torrent not exist
-       if [ ! -e "${BTFCMETA}/${NAME}.torrent" ]; then
-         make_torrent ${NAME}
-# .... fi
-       fi
-       STATUS="-S"
-# .... run btfc -c [-l] [-p] [-d source_directory] [-P PORT] [-s seconds]
-       ${MYCOMMAND} -c $HARDLINK $PRUNE -d $FULLPATH -N $NAME -P $PORT -I $WAITSECONDS -w $WATCH $STATUS $TRACKERURL &
-# .. fi
-     fi
-#
+  main_init
 elif [ "$ACTION" = "clone" ]; then
-# btfc -c [-l] [-p] [-d directory] [-P PORT] [-s seconds]
-# .. -c means clone
-# .. SUBSCRIBE (using copy strategy) from ~/gitsync to ~/.btfctmp/folder.torrent
-     subscribe_using ${SUBSCRIBE}
-# .. if ! diff ~/.btfctmp/folder.torrent ~/.btfcmeta/folder.torrent (different)
-     leech
-     while validpid "${BTFCMETA}/${NAME}.pid" ; do
-       ########## Look for "Complete" or "Seeding" in log
-       if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
-         diff_cache_folder
-       elif cat "${BTFCMETA}/${NAME}.log" | grep 'Seeding,' >/dev/null ; then
-         diff_cache_folder
-       fi
-       subscribe_using ${SUBSCRIBE}
-       leech
-       sleep $WAITSECONDS
-     done &
+  mail_clone
 elif [ "$ACTION" = "status" ]; then
   if pgrep -lf transmission-cli | grep '\-er \-w' >/dev/null 2>&1 ; then
     for i in `pgrep -lf transmission-cli | grep '\-er \-w' \
