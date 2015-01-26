@@ -79,4 +79,4 @@ Or something like WebDAV, or a network file system, or a clustered file system, 
 
 # Future work
 
-[ ] Look into using rtorrent as the torrent client because it supports the 'd.add_peer=host[:port]' command to manually add a peer (not for torrents marked "private")
+- [ ] Look into using rtorrent as the torrent client because it supports the 'd.add_peer=host[:port]' command to manually add a peer (not for torrents marked "private")
