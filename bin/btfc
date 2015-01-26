@@ -254,14 +254,14 @@ main_init() {
        fi
        STATUS="-S"
 # .... run btfc -c [-l] [-p] [-d source_directory] [-P PORT] [-s seconds]
-       mail_clone
+       main_clone
 # .. fi
      fi
 #
 }
 
 
-mail_clone() {
+main_clone() {
 # btfc -c [-l] [-p] [-d directory] [-P PORT] [-s seconds]
 # .. -c means clone
 # .. SUBSCRIBE (using copy strategy) from ~/gitsync to ~/.btfctmp/folder.torrent
@@ -352,7 +352,7 @@ fi
 if [ "$ACTION" = "init" ]; then
   main_init
 elif [ "$ACTION" = "clone" ]; then
-  mail_clone
+  main_clone
 elif [ "$ACTION" = "status" ]; then
   if pgrep -lf transmission-cli | grep '\-er \-w' >/dev/null 2>&1 ; then
     for i in `pgrep -lf transmission-cli | grep '\-er \-w' \
