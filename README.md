@@ -1,6 +1,7 @@
 # btfc2
-complete rewrite of btfc
-just shell script and transmission-cli
+complete rewrite of btfc. BitTorrent for private clusters
+
+shell script, grep, cat, awk, tr, sed, ps, kill, rsync and transmission-cli
 
 # How it works
 
