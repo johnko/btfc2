@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150126-033700
+SCRIPTVERSION=150126-045250
 
 
 ########## Variables
@@ -90,18 +90,14 @@ make_torrent() {
   # ...... create ~/.btfctmp/folder.torrent file from ~/.btfccache/folder
   ########## modified from \
   # http://edwardslab.bmcb.georgetown.edu/software/bittorrent_for_clusters.html
-  if [ -f "${BTFCCACHE}/${NAME}" ] ; then
+  if [ -f "${BTFCCACHE}/${NAME}" ] || [ -d "${BTFCCACHE}/${NAME}" ]; then
+    date >>"${BTFCMETA}/${NAME}.init.log"
     transmission-create $PRIVATETORRENT $TRACKERURL \
-      -o "${BTFCMETA}/${NAME}.torrent" "${BTFCCACHE}/${NAME}"
+      -o "${BTFCMETA}/${NAME}.torrent" "${BTFCCACHE}/${NAME}" \
+      >>"${BTFCMETA}/${NAME}.init.log" 2>&1
     chmod 644 "${BTFCMETA}/${NAME}.torrent"
     HASH=`transmission-show ${BTFCMETA}/${NAME}.torrent | grep 'Hash: ' | awk '{print $2}'`
-    #echo "Made torrent file for file $NAME." >&2
-  elif [ -d "${BTFCCACHE}/${NAME}" ] ; then
-    transmission-create $PRIVATETORRENT $TRACKERURL \
-      -o "${BTFCMETA}/${NAME}.torrent" "${BTFCCACHE}/${NAME}"
-    chmod 644 "${BTFCMETA}/${NAME}.torrent"
-    HASH=`transmission-show ${BTFCMETA}/${NAME}.torrent | grep 'Hash: ' | awk '{print $2}'`
-    #echo "Made torrent file for directory $NAME." >&2
+    echo "`date` $HASH" >>"${BTFCMETA}/${NAME}.init.log"
   else
     echo "ERROR: No such file or directory $NAME." >&2
   fi
