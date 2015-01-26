@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150126-081018
+SCRIPTVERSION=150126-084522
 
 
 ########## Variables
@@ -38,7 +38,6 @@ SCRIPTVERSION=150126-081018
 BTFCMETA="${HOME}/.btfcmeta"
 BTFCCACHE="${HOME}/.btfccache"
 BTFCTMP="${HOME}/.btfctmp"
-MYPID=""
 
 ########## Functions
 
@@ -116,7 +115,7 @@ diff_cache_folder(){
 # .... stop client
     kill_transmissioncli
 # .. run btfc -i [-l] [-p] [-d save_directory] [-P PORT] [-s seconds]
-    btfc_init
+    btfc_init noclient
 # .. else
   else
 # ...... on complete: rsync with (-c default, -t speed) and with backup or save conflict copy to ~/btfc/folder
@@ -202,7 +201,6 @@ run_if_not_running() {
       echo $! >"${BTFCMETA}/${NAME}.pid"
       umask 022
       sleep 1
-      MYPID="`cat ${BTFCMETA}/${NAME}.pid`"
     else
       exiterror 1 "Torrent meta file not found: ${BTFCMETA}/${NAME}.torrent"
     fi
@@ -235,7 +233,7 @@ btfc_init() {
        fi
        STATUS="-S"
 # .... run btfc -c [-l] [-p] [-d source_directory] [-P PORT] [-s seconds]
-       btfc_client
+       [ "$1" = "noclient" ] || btfc_client
 # .. fi
      fi
 #
@@ -249,8 +247,7 @@ btfc_client() {
      subscribe_using ${SUBSCRIBE}
 # .. if ! diff ~/.btfctmp/folder.torrent ~/.btfcmeta/folder.torrent (different)
      run_if_not_running
-     OLDPID="$MYPID"
-     while [ "$OLDPID" = "$MYPID" ] && validpid "${BTFCMETA}/${NAME}.pid" ; do
+     while validpid "${BTFCMETA}/${NAME}.pid" ; do
        sleep $WAITSECONDS
        ########## Look for "Complete" or "Seeding" in log
        if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
