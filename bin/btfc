@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150126-045250
+SCRIPTVERSION=150126-064519
 
 
 ########## Variables
@@ -99,7 +99,7 @@ make_torrent() {
     HASH=`transmission-show ${BTFCMETA}/${NAME}.torrent | grep 'Hash: ' | awk '{print $2}'`
     echo "`date` $HASH" >>"${BTFCMETA}/${NAME}.init.log"
   else
-    echo "ERROR: No such file or directory $NAME." >&2
+    exiterror 1 "No such file or directory $NAME."
   fi
 # .... PUBLISH (using the copy+git commit strategy) from ~/.btfctmp/folder.torrent to ~/gitsync (in gtfc if gitsync exists)
   publish_using ${PUBLISH}
@@ -202,8 +202,7 @@ leech() {
       umask 022
       sleep 1
     else
-      echo "ERROR: Torrent meta file not found: ${BTFCMETA}/${NAME}.torrent" >&2
-      exiterror 1
+      exiterror 1 "Torrent meta file not found: ${BTFCMETA}/${NAME}.torrent"
     fi
   fi
 }
