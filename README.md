@@ -3,6 +3,8 @@ complete rewrite of btfc. BitTorrent for private clusters
 
 shell script, grep, cat, awk, tr, sed, ps, kill, rsync and transmission-cli
 
+If all our nodes are in a local network, we can turn off UPnP port mapping, DHT and trackers, and only enable Local Peer Discovery so it truly is a private BitTorrent cluster.
+
 # How it works
 
 INIT: It copies ~/btfc to ~/.btfccache/btfc, creates btfc.torrent, publishes the btfc.torrent (use gtfc to keep peers in sync), calls CLONE.
@@ -12,8 +14,6 @@ CLONE: It fetches the btfc.torrent (from gtfc), leeches/seeds to ~/.btfccache/bt
 # Quick Usage
 
 First you need a working [gtfc cluster](https://github.com/johnko/gtfc).
-
-You may want to enable Local Peer Discovery on all nodes (see Frequently Asked Questions below)
 
 Then, on the source:
 
@@ -30,7 +30,13 @@ mkdir ~/btfc
 btfc -c
 ```
 
-Wait for it to download.
+Wait for it to sync. Then on a peer:
+
+```
+date > ~/btfc/peerfile
+```
+
+In about 60 to 120 seconds, this peer will now generate a btfc.torrent, publish it and start seeding the changes to the cluster. If you are using [gtfc](https://github.com/johnko/gtfc), all the other peers will notice the newly published btfc.torrent in about 60 seconds and start leeching.
 
 # Speedup with hard links
 
@@ -45,9 +51,13 @@ Decentralized/distributed storage          | Kind of. When all nodes are up to d
 Decentralized/distributed transfers        | Yes.
 Chunked data transfers from multiple hosts | Yes.
 Optimal use                                | Any type of file.
-Limitations                                | Can't use itself to sync itself, requires publish/fetch code to keep .torrent file in sync
+Limitations                                | Can't use itself to sync itself, requires publish/fetch code to keep .torrent file in sync. File deletions are not synchronized yet.
 
 # Frequently Asked Questions
+
+### How well does this handle file conflicts?
+
+Probably not well. If you're using [gtfc](https://github.com/johnko/gtfc), the last .torrent metafile wins. File deletions are not synchronized yet.
 
 ### How do I restrict peers or keep my data private?
 
@@ -56,6 +66,7 @@ Limitations                                | Can't use itself to sync itself, re
 - only allow your nodes to connect out to known/trusted peers.
 - don't expose your .torrent metadata.
 - you may also want to run your own tracker.
+- maybe turn off DHT.
 
 ### Does btfc use trackers?
 
