@@ -29,7 +29,7 @@
 ######################################################################
 # Script version is yymmdd-HHMMSS in UTC, date +%y%m%d-%H%M%S
 ######################################################################
-SCRIPTVERSION=150126-064519
+SCRIPTVERSION=150126-074054
 
 
 ########## Variables
@@ -115,7 +115,7 @@ diff_cache_folder(){
 # .... stop client
     kill_transmissioncli
 # .. run btfc -i [-l] [-p] [-d save_directory] [-P PORT] [-s seconds]
-    main_init
+    btfc_init
 # .. else
   else
 # ...... on complete: rsync with (-c default, -t speed) and with backup or save conflict copy to ~/btfc/folder
@@ -178,7 +178,7 @@ publish_using() {
 }
 
 
-leech() {
+run_if_not_running() {
   # ...... stop client
   if [ -e "${BTFCTMP}/${NAME}.torrent" ]; then
     if [ -e "${BTFCMETA}/${NAME}.torrent" ]; then
@@ -208,7 +208,7 @@ leech() {
 }
 
 
-main_init() {
+btfc_init() {
 # PSEUDO CODE
 #
 # btfc -i [-l] [-p] [-d directory] [-P PORT] [-s seconds]
@@ -233,20 +233,20 @@ main_init() {
        fi
        STATUS="-S"
 # .... run btfc -c [-l] [-p] [-d source_directory] [-P PORT] [-s seconds]
-       main_clone
+       btfc_client
 # .. fi
      fi
 #
 }
 
 
-main_clone() {
+btfc_client() {
 # btfc -c [-l] [-p] [-d directory] [-P PORT] [-s seconds]
-# .. -c means clone
+# .. -c means client
 # .. SUBSCRIBE (using copy strategy) from ~/gitsync to ~/.btfctmp/folder.torrent
      subscribe_using ${SUBSCRIBE}
 # .. if ! diff ~/.btfctmp/folder.torrent ~/.btfcmeta/folder.torrent (different)
-     leech
+     run_if_not_running
      while validpid "${BTFCMETA}/${NAME}.pid" ; do
        ########## Look for "Complete" or "Seeding" in log
        if cat "${BTFCMETA}/${NAME}.log" | grep ' Complete' >/dev/null ; then
@@ -255,7 +255,7 @@ main_clone() {
          diff_cache_folder
        fi
        subscribe_using ${SUBSCRIBE}
-       leech
+       run_if_not_running
        sleep $WAITSECONDS
      done &
 }
@@ -270,7 +270,7 @@ while getopts w:d:N:P:t:I:icslpSLvh o; do
     t) TRACKERURL="${TRACKERURL} -t ${OPTARG}" ;;
     I) WAITSECONDS="${OPTARG}" ;;
     i) ACTION="init" ;;
-    c) ACTION="clone" ;;
+    c) ACTION="client" ;;
     s) ACTION="status" ;;
     l) HARDLINK="-l" ;;
     p) PRUNE="-p" ;;
@@ -329,9 +329,9 @@ fi
 
 
 if [ "$ACTION" = "init" ]; then
-  main_init
-elif [ "$ACTION" = "clone" ]; then
-  main_clone
+  btfc_init
+elif [ "$ACTION" = "client" ]; then
+  btfc_client
 elif [ "$ACTION" = "status" ]; then
   if pgrep -lf transmission-cli | grep '\-er \-w' >/dev/null 2>&1 ; then
     for i in `pgrep -lf transmission-cli | grep '\-er \-w' \
