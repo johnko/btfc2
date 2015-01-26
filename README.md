@@ -15,7 +15,7 @@ CLONE: It fetches the btfc.torrent (from gtfc), leeches/seeds to ~/.btfccache/bt
 
 First you need a working [gtfc cluster](https://github.com/johnko/gtfc).
 
-Then, on the source:
+Then, on the source as the gtfc `urep` user:
 
 ```
 mkdir ~/btfc
@@ -23,14 +23,14 @@ date > ~/btfc/newfile
 btfc -i
 ```
 
-Then, on the peers:
+Then, on the peers as the gtfc `urep` user:
 
 ```
 mkdir ~/btfc
 btfc -c
 ```
 
-Wait for it to sync. Then on a peer:
+Wait for it to sync. Then on a peer as the gtfc `urep` user:
 
 ```
 date > ~/btfc/peerfile
