@@ -50,6 +50,7 @@ Centralized aspect                         | The first node with unique/latest d
 Decentralized/distributed storage          | Kind of. When all nodes are up to date, there is no central store because completed torrents are mirrors. Akin to RAID1 mirror, but not to RAID5 span.
 Decentralized/distributed transfers        | Yes.
 Chunked data transfers from multiple hosts | Yes.
+Secure?                                    | No.
 Optimal use                                | Any type of file.
 Limitations                                | Can't use itself to sync itself, requires publish/fetch code to keep .torrent file in sync. File deletions are not synchronized yet.
 
