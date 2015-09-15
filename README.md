@@ -1,3 +1,5 @@
+See DelugeFS for similar concept but using FUSE at https://github.com/johnko/delugefs
+
 # btfc2
 complete rewrite of btfc. BitTorrent for private clusters
 
